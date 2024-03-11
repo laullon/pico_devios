@@ -11,8 +11,11 @@ WebServer server(80);
 Servo myservo;
 Servo myservo2;
 
+const char compile_date[] = __DATE__ " " __TIME__;
+
 void initWiFi();
 void handleRoot();
+void pp();
 
 void setup()
 {
@@ -32,19 +35,23 @@ void setup()
 
 void initWiFi()
 {
-  digitalWrite(PIN_LED, LOW);
+  for (size_t i = 0; i < 5; i++)
+  {
+    digitalWrite(PIN_LED, HIGH);
+    delay(100);
+    digitalWrite(PIN_LED, LOW);
+    delay(100);
+  }
 
   WiFi.begin("Amiga500", "poipoi1234567890");
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(500);
-    Serial.print(".");
   }
+  digitalWrite(PIN_LED, HIGH);
+
   Serial.println("");
   Serial.print("WiFi connected at IP Address ");
   Serial.println(WiFi.localIP());
-
-  digitalWrite(PIN_LED, HIGH);
 
   if (MDNS.begin("picow"))
   {
@@ -53,14 +60,29 @@ void initWiFi()
 
   server.on("/", handleRoot);
 
+  server.addHook([](const String &method, const String &url, WiFiClient *client, WebServer::ContentTypeFunction contentType)
+                 { 
+                  Serial.print(method);
+                  Serial.print(" - ");
+                  Serial.println(url);
+                  return WebServer::CLIENT_REQUEST_CAN_CONTINUE; });
+
   server.begin();
   Serial.println("HTTP server started");
 }
 
+void pp()
+{
+  Serial.println("handleRoot()");
+}
+
 void handleRoot()
 {
+  Serial.println("handleRoot()");
   File file = LittleFS.open("/index.html", "r");
-  server.send(200, "text/html", file.readString());
+  String index = file.readString();
+  index.replace("#######", compile_date);
+  server.send(200, "text/html", index);
 }
 
 void loop1()

@@ -1,21 +1,21 @@
-servos:
- - name: desvio 1
-   id: 1
- - name: desvio 2
-   id: 2
- - name: desvio 3
-   id: 3
- - name: desvio 4
-   id: 4
- - name: desvio 5
-   id: 5
- - name: desvio 6
-   id: 6
- - name: desvio 7
-   id: 7
- - name: desvio 8
-   id: 8
- - name: desvio 9
-   id: 9
- - name: desvio 10
-   id: 10
+vias:
+  - name: Via 1
+    servos:
+      - desc: Izq -> 2
+        id: 0
+      - desc: Der -> 2
+        id: 1
+  - name: Via 2
+    servos:
+      - desc: Izq -> 1
+        id: 2
+      - desc: Izq -> 3
+        id: 3
+      - desc: Der -> 1
+        id: 4
+      - desc: Der -> 3
+        id: 5
+  - name: Via 3
+    servos:
+      - desc: Der -> 2
+        id: 6
