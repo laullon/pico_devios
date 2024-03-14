@@ -122,26 +122,86 @@
       </div>
     </div>
   </div>
+  <hr>
+  <pre>status: <span id="state-debug"></span></pre>
+  <pre>config: <span id="config"></span></pre>
+  <pre>#######</pre>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-
   <script>
-    const status = [0, 0, 0, 0, 0, 0, 0];
-    const selector_list = document.getElementsByClassName("selector");
-    for (let selector of selector_list) {
-      selector.addEventListener('change', selectorChange);
+    const state = [0, 0, 0, 0, 0, 0, 0];
+    {
+      const selector_list = document.getElementsByClassName("selector");
+      for (let selector of selector_list) {
+        selector.addEventListener('change', selectorChange);
+      }
+
+      var xmlHttp = new XMLHttpRequest();
+      fetch("/state")
+        .then(response => response.json()).then(json => updateState(json))
+        .catch(error => console.error(error))
+        .finally(() => {
+          console.log("done state");
+        });
+    }
+
+
+    function updateState(data) {
+      console.log("State received 1 --> ", data);
+      for (let i = 0; i < data.length; i++) {
+        state[i] = data[i];
+      }
+      refreshState();
+    }
+
+    function refreshState() {
+      const selector_list = document.getElementsByClassName("selector");
+      for (let selector of selector_list) {
+        selector.checked = selector.value == state[selector.name];
+      }
+      document.getElementById("state-debug").innerText = state.join(",");
     }
 
     function selectorChange(event) {
-      // alert(event.target.value);
-      status[event.target.name] = event.target.value;
-      document.getElementById("status").innerText = status.join(",");
+      state[event.target.name] = event.target.value;
+
+      fetch("/state", {
+        method: "POST",
+        body: JSON.stringify(state),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      }).finally(() => {
+        console.log("done state post");
+      });
+
+      refreshState();
     }
   </script>
 
 
   <script>
     const config = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+    var xmlHttp = new XMLHttpRequest();
+    fetch("/config")
+      .then(response => response.json()).then(json => updateConfig(json))
+      .catch(error => console.error(error))
+      .finally(() => {
+        console.log("done config");
+      });
+
+    function updateConfig(data) {
+      console.log("Config received 1 --> ", data);
+      for (let servo = 0; servo < 7; servo++) {
+        for (let state = 0; state < 2; state++) {
+          config[servo][state] = data.shift();
+        }
+      }
+      document.getElementById("config").innerText = config.join(",");
+    }
+
+
     const list = document.getElementsByClassName("offset_bt");
 
     for (let item of list) {
@@ -150,18 +210,18 @@
 
     function updateValue(event) {
       const value = document.getElementById("value");
-      const newVal = parseInt(value.innerHTML) + parseInt(event.target.getAttribute("offset"));
+      const servo = document.getElementById("switch").value;
+      var state = document.querySelector('input[name = selector_cfg]:checked').value;
+
+      const newVal = config[servo][state] + parseInt(event.target.getAttribute("offset"));
       if (between(newVal, 0, 180)) {
         value.innerText = newVal;
 
-        const servo = document.getElementById("switch").value;
-        var state = document.querySelector('input[name = selector_cfg]:checked').value;
         console.log(servo + " " + state);
 
         config[servo][state] = newVal;
         document.getElementById("config").innerText = config.join(",");
       }
-
     }
 
     function between(x, min, max) {
@@ -169,10 +229,6 @@
     }
 
   </script>
-  <hr>
-  <pre>status: <span id="status"></span></pre>
-  <pre>config: <span id="config"></span></pre>
-  <pre>#######</pre>
 </body>
 
 </html>

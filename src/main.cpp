@@ -5,6 +5,27 @@
 #include <WebServer.h>
 #include <LEAmDNS.h>
 #include <LittleFS.h>
+#include <ArduinoJson.h>
+
+byte config[7][2] = {
+    {0, 0},
+    {0, 0},
+    {0, 0},
+    {0, 0},
+    {0, 0},
+    {0, 0},
+    {0, 0},
+};
+
+byte state[7] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
 
 WebServer server(80);
 
@@ -15,7 +36,9 @@ const char compile_date[] = __DATE__ " " __TIME__;
 
 void initWiFi();
 void handleRoot();
-void pp();
+void handleConfig();
+void handleState();
+void handleStatePost();
 
 void setup()
 {
@@ -31,6 +54,14 @@ void setup()
   pinMode(PIN_LED, OUTPUT);
 
   initWiFi();
+
+  for (int s = 0; s < 7; s++)
+  {
+    for (int p = 0; p < 2; p++)
+    {
+      config[s][p] = s * 2 + p;
+    }
+  }
 }
 
 void initWiFi()
@@ -59,6 +90,10 @@ void initWiFi()
   }
 
   server.on("/", handleRoot);
+  server.on("/config", handleConfig);
+  // server.on("/state", HTTP_GET,handleState);
+  server.on("/state", HTTP_POST, handleStatePost);
+  server.on("/state", handleState);
 
   server.addHook([](const String &method, const String &url, WiFiClient *client, WebServer::ContentTypeFunction contentType)
                  { 
@@ -71,9 +106,56 @@ void initWiFi()
   Serial.println("HTTP server started");
 }
 
-void pp()
+void handleState()
 {
-  Serial.println("handleRoot()");
+  String out;
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+  for (auto &&i : state)
+  {
+    array.add(i);
+  }
+
+  serializeJson(doc, out);
+  server.send(200, "text/html", out);
+}
+
+void handleStatePost()
+{
+  Serial.println("handleStatePost()");
+  if (server.args() == 1)
+  {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, server.arg(0));
+    if (error)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      server.send(500, "text/html", error.f_str());
+      return;
+    }
+    for (int i = 0; i < doc.size(); i++)
+    {
+      int v = doc[i];
+      state[i] = v;
+    }
+  }
+  server.send(200, "text/html", "ok");
+}
+
+void handleConfig()
+{
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+  for (int s = 0; s < 7; s++)
+  {
+    for (int p = 0; p < 2; p++)
+    {
+      array.add(config[s][p]);
+    }
+  }
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "text/html", out);
 }
 
 void handleRoot()
@@ -85,21 +167,28 @@ void handleRoot()
   server.send(200, "text/html", index);
 }
 
-void loop1()
+void loop()
 {
   server.handleClient();
   MDNS.update();
 }
 
-void loop()
+void loop1()
 {
-  int pos;
-  for (pos = 0; pos <= 180; pos += 1)
+  for (auto &&s : state)
   {
-    myservo.write(pos);
-    myservo2.write(pos);
-    delay(15);
+    Serial.print(s);
+    Serial.print(", ");
   }
+  Serial.println("");
+  delay(1000);
+  // int pos;
+  // for (pos = 0; pos <= 180; pos += 1)
+  // {
+  //   myservo.write(pos);
+  //   myservo2.write(pos);
+  //   delay(15);
+  // }
 
   // Serial.println("1");
   // for (int i = 0; i < 100; i++)
