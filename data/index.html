@@ -108,9 +108,9 @@
         </select>
       </div>
       <div id="state" class="d-flex flex-row">
-        <input value="0" type="radio" class="btn-check" name="selector_cfg" id="selector_cfg_r" autocomplete="off" checked>
+        <input value="0" type="radio" class="config_state btn-check" name="selector_cfg" id="selector_cfg_r" autocomplete="off" checked>
         <label class="btn btn-outline-primary" for="selector_cfg_r">Recto</label>
-        <input value="1" type="radio" class="btn-check" name="selector_cfg" id="selector_cfg_d" autocomplete="off">
+        <input value="1" type="radio" class="config_state btn-check" name="selector_cfg" id="selector_cfg_d" autocomplete="off">
         <label class="btn btn-outline-primary" for="selector_cfg_d">Desviado</label>
       </div>
       <div id="position" class="d-flex flex-row">
@@ -123,9 +123,11 @@
     </div>
   </div>
   <hr>
-  <pre>status: <span id="state-debug"></span></pre>
-  <pre>config: <span id="config"></span></pre>
-  <pre>#######</pre>
+  <pre>
+    state: <span id="state-debug"></span>
+    config: <span id="config"></span>
+    #######
+  </pre>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
@@ -146,7 +148,6 @@
         });
     }
 
-
     function updateState(data) {
       console.log("State received 1 --> ", data);
       for (let i = 0; i < data.length; i++) {
@@ -165,7 +166,11 @@
 
     function selectorChange(event) {
       state[event.target.name] = event.target.value;
+      pushState();
+      refreshState();
+    }
 
+    function pushState() {
       fetch("/state", {
         method: "POST",
         body: JSON.stringify(state),
@@ -175,8 +180,6 @@
       }).finally(() => {
         console.log("done state post");
       });
-
-      refreshState();
     }
   </script>
 
@@ -202,10 +205,22 @@
     }
 
 
-    const list = document.getElementsByClassName("offset_bt");
-
+    var list = document.getElementsByClassName("offset_bt");
     for (let item of list) {
       item.addEventListener('click', updateValue);
+    }
+
+    list = document.getElementsByClassName("config_state");
+    for (let item of list) {
+      item.addEventListener('change', updateConfigState);
+    }
+
+    function updateConfigState(event) {
+      const servo = document.getElementById("switch").value;
+      var v = event.target.value;
+      state[servo] = v;
+      pushState();
+      refreshState();
     }
 
     function updateValue(event) {
@@ -216,13 +231,24 @@
       const newVal = config[servo][state] + parseInt(event.target.getAttribute("offset"));
       if (between(newVal, 0, 180)) {
         value.innerText = newVal;
-
-        console.log(servo + " " + state);
-
         config[servo][state] = newVal;
         document.getElementById("config").innerText = config.join(",");
       }
+      pushConfig();
     }
+
+    function pushConfig() {
+      fetch("/config", {
+        method: "POST",
+        body: JSON.stringify(config),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      }).finally(() => {
+        console.log("done state post");
+      });
+    }
+
 
     function between(x, min, max) {
       return x >= min && x <= max;
